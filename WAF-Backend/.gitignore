@@ -1,0 +1,43 @@
+# Compiled class files
+*.class
+target/
+*.jar
+*.war
+*.ear
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# Spring Boot
+*.log
+logs/
+data/
+
+# Environment variables
+.env
+.env.docker
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.h2.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets and credentials
+application-secrets.yml
+*.key
+*.pem

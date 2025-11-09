@@ -1,0 +1,12 @@
+# WAF-AP Manager sudoers configuration
+# This file should be placed in /etc/sudoers.d/wafap
+# IMPORTANT: Test with 'visudo -cf /etc/sudoers.d/wafap' before deployment
+
+# Allow wafap user to run specific scripts without password
+# Replace 'wafap' with the actual user running the Spring Boot application
+
+wafap ALL=(ALL) NOPASSWD: /opt/wafap/scripts/ban-device.sh
+wafap ALL=(ALL) NOPASSWD: /opt/wafap/scripts/unban-device.sh
+wafap ALL=(ALL) NOPASSWD: /opt/wafap/scripts/reload-firewall.sh
+
+# If running as a different user (e.g., 'spring'), replace 'wafap' with that username

@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wafap-postgres
+    environment:
+      POSTGRES_DB: wafap
+      POSTGRES_USER: mahafeno
+      POSTGRES_PASSWORD: Mahafeno2003
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - wafap-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mahafeno"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wafap-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wafap-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Use .env.docker file for sensitive credentials
+    env_file:
+      - .env.docker
+    environment:
+      # Override for Docker deployment
+      DB_HOST: postgres
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/var/log/wafap
+      # DHCP leases - corrected path
+      - /var/lib/misc/dnsmasq.leases:/var/lib/misc/dnsmasq.leases:ro
+      # Journalctl access for SSH monitoring
+      - /var/run/systemd/journal:/var/run/systemd/journal:ro
+      # Scripts directory
+      - ./scripts:/opt/wafap/scripts:ro
+    networks:
+      - wafap-network
+    # Alternative: use host network for full system access
+    # network_mode: host
+    privileged: true  # Required for iptables and journalctl access
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    restart: unless-stopped
+
+networks:
+  wafap-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

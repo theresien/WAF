@@ -1,0 +1,1 @@
+mahafeno ALL=(ALL) NOPASSWD: /opt/wafap/scripts/ban-device.sh, /opt/wafap/scripts/unban-device.sh, /opt/wafap/scripts/reload-firewall.sh
