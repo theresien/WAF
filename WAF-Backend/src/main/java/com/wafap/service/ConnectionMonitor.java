@@ -23,16 +23,20 @@ public class ConnectionMonitor {
         this.deviceRepository = deviceRepository;
     }
 
-    @Scheduled(fixedRate = 5000)
+    @Scheduled(fixedRate = 15000)
     @Transactional
     public void updateConnectedDevices() {
         Set<String> connectedMacs = getConnectedMacAddresses();
         
         deviceRepository.findAll().forEach(device -> {
             boolean isConnected = connectedMacs.contains(device.getMacAddress().toLowerCase());
-            if (device.getIsConnected() != isConnected) {
+            
+            // Only update if status changed
+            if (device.getIsConnected() == null || device.getIsConnected() != isConnected) {
                 device.setIsConnected(isConnected);
                 deviceRepository.save(device);
+                logger.info("Device {} ({}) connection status: {}", 
+                    device.getMacAddress(), device.getIpAddress(), isConnected ? "ONLINE" : "OFFLINE");
             }
         });
     }
@@ -40,22 +44,27 @@ public class ConnectionMonitor {
     private Set<String> getConnectedMacAddresses() {
         Set<String> macs = new HashSet<>();
         try {
-            Process process = Runtime.getRuntime().exec(new String[]{"ip", "neigh", "show"});
+            // Use ip neigh show on the WiFi interface only
+            Process process = Runtime.getRuntime().exec(new String[]{"ip", "neigh", "show", "dev", "wlp3s0"});
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             
             String line;
             while ((line = reader.readLine()) != null) {
-                if (line.contains("REACHABLE") || line.contains("STALE") || line.contains("DELAY")) {
+                // Only accept REACHABLE for truly connected devices
+                if (line.contains("REACHABLE")) {
                     String[] parts = line.split("\\s+");
                     for (int i = 0; i < parts.length - 1; i++) {
                         if (parts[i].equals("lladdr")) {
-                            macs.add(parts[i + 1].toLowerCase());
+                            String mac = parts[i + 1].toLowerCase();
+                            macs.add(mac);
+                            logger.debug("Connected device: {}", mac);
                             break;
                         }
                     }
                 }
             }
             reader.close();
+            logger.info("Total connected devices: {}", macs.size());
         } catch (Exception e) {
             logger.error("Error reading connected devices: {}", e.getMessage());
         }

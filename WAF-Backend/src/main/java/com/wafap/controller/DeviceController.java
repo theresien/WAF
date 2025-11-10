@@ -132,4 +132,27 @@ public class DeviceController {
 
         return ResponseEntity.ok(devices);
     }
+
+    @PatchMapping("/{id}/hostname")
+    @Operation(
+        summary = "Update device hostname",
+        description = "Update the hostname of a device"
+    )
+    public ResponseEntity<?> updateHostname(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> body) {
+        
+        String hostname = body.get("hostname");
+        if (hostname == null || hostname.isBlank()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Hostname is required"));
+        }
+
+        return deviceRepository.findById(id)
+                .map(device -> {
+                    device.setHostname(hostname);
+                    deviceRepository.save(device);
+                    return ResponseEntity.ok(DeviceDTO.fromEntity(device));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
 }

@@ -93,6 +93,16 @@ public class DhcpLeaseReader {
             if (hostname == null || hostname.isBlank()) {
                 hostname = resolveHostname(ipAddress);
             }
+            
+            // If still no hostname, use a generic name based on vendor
+            if (hostname == null || hostname.isBlank()) {
+                String vendor = macVendorService.getVendor(macAddress);
+                if (vendor != null && !vendor.isBlank()) {
+                    hostname = vendor.split(" ")[0] + "-Device";
+                } else {
+                    hostname = "Device-" + macAddress.substring(macAddress.length() - 5).replace(":", "");
+                }
+            }
 
             activeMacs.add(macAddress);
 
@@ -108,8 +118,11 @@ public class DhcpLeaseReader {
                     device.setIpAddress(ipAddress);
                 }
 
-                if (hostname != null && !hostname.equals(device.getHostname())) {
-                    device.setHostname(hostname);
+                // Only update hostname if device doesn't have one yet
+                if (device.getHostname() == null || device.getHostname().isBlank()) {
+                    if (hostname != null && !hostname.equals(device.getHostname())) {
+                        device.setHostname(hostname);
+                    }
                 }
 
                 // Update vendor if not set

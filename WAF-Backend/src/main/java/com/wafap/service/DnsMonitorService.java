@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 public class DnsMonitorService {
 
     private static final Logger logger = LoggerFactory.getLogger(DnsMonitorService.class);
-    private static final Pattern DNS_PATTERN = Pattern.compile("query\\[A+\\] (\\S+) from (\\d+\\.\\d+\\.\\d+\\.\\d+)");
+    private static final Pattern DNS_PATTERN = Pattern.compile("query\\[[A-Z]+\\] (\\S+) from (\\d+\\.\\d+\\.\\d+\\.\\d+)");
 
     private final BlacklistedDomainRepository blacklistRepo;
     private final DeviceRepository deviceRepository;
@@ -52,14 +52,23 @@ public class DnsMonitorService {
     @Scheduled(fixedRate = 5000)
     public void monitorDnsQueries() {
         try (RandomAccessFile raf = new RandomAccessFile(dnsLogFile, "r")) {
+            long fileLength = raf.length();
+            if (lastPosition > fileLength) {
+                lastPosition = 0; // File was rotated
+            }
             raf.seek(lastPosition);
             String line;
+            int linesProcessed = 0;
             while ((line = raf.readLine()) != null) {
                 processDnsQuery(line);
+                linesProcessed++;
             }
             lastPosition = raf.getFilePointer();
+            if (linesProcessed > 0) {
+                logger.debug("Processed {} DNS log lines", linesProcessed);
+            }
         } catch (Exception e) {
-            logger.debug("DNS log not available: {}", e.getMessage());
+            logger.warn("DNS log not available: {}", e.getMessage());
         }
     }
 
@@ -69,34 +78,40 @@ public class DnsMonitorService {
 
         String domain = matcher.group(1);
         String sourceIp = matcher.group(2);
+        
+        logger.debug("DNS Query: {} from {}", domain, sourceIp);
 
         blacklistRepo.findAll().forEach(blacklisted -> {
-            if (domain.contains(blacklisted.getDomain())) {
-                deviceRepository.findByIpAddress(sourceIp).ifPresent(device -> {
-                    Event event = new Event(device, EventType.HTTPS_DANGEROUS_SITE);
-                    event.setSourceIp(sourceIp);
-                    event.setRequestUri(domain);
-                    event.setSeverity(blacklisted.getSeverity());
+            if (domain.contains(blacklisted.getDomain()) || blacklisted.getDomain().contains(domain)) {
+                logger.warn("Blacklisted domain accessed: {} from IP {}", domain, sourceIp);
+                
+                var deviceOpt = deviceRepository.findByIpAddress(sourceIp);
+                Device device = deviceOpt.orElse(null);
+                
+                Event event = new Event(device, EventType.HTTPS_DANGEROUS_SITE);
+                event.setSourceIp(sourceIp);
+                event.setRequestUri(domain);
+                event.setRuleId("BLACKLIST_DOMAIN");
+                event.setSeverity(blacklisted.getSeverity());
 
-                    // Security: Use ObjectMapper to build JSON safely
-                    try {
-                        var json = objectMapper.createObjectNode();
-                        json.put("domain", domain);
-                        json.put("blocked", true);
-                        event.setMessageJson(objectMapper.writeValueAsString(json));
-                    } catch (Exception e) {
-                        logger.error("Failed to create JSON for DNS event", e);
-                        event.setMessageJson("{\"domain\":\"unknown\",\"blocked\":true}");
-                    }
+                try {
+                    var json = objectMapper.createObjectNode();
+                    json.put("domain", domain);
+                    json.put("blocked", true);
+                    json.put("attack_type", "Blacklisted Domain Access");
+                    event.setMessageJson(objectMapper.writeValueAsString(json));
+                } catch (Exception e) {
+                    logger.error("Failed to create JSON for DNS event", e);
+                    event.setMessageJson("{\"domain\":\"unknown\",\"blocked\":true,\"attack_type\":\"Blacklisted Domain\"}");
+                }
 
-                    eventRepository.save(event);
+                eventRepository.save(event);
+                logger.info("Event created for blacklisted domain: {} from {} (device: {})", 
+                    domain, sourceIp, device != null ? device.getMacAddress() : "unknown");
 
-                    logger.warn("Dangerous site accessed: {} by device {}", domain, device.getMacAddress());
-
-                    if (blacklisted.getSeverity() >= 4) {
-                        policyService.banDevice(device, "Accessed dangerous site: " + domain, null);
-                    }
-                });
+                if (device != null && blacklisted.getSeverity() >= 4) {
+                    policyService.banDevice(device, "Accessed dangerous site: " + domain, null);
+                }
             }
         });
     }

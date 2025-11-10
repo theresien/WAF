@@ -9,10 +9,10 @@ export default function HttpEventsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [severityFilter, setSeverityFilter] = useState("ALL");
 
-  // Fetch HTTP events
   const { data: eventsData = { content: [] }, isLoading } = useQuery({
     queryKey: ["events", "HTTP_ATTACK"],
     queryFn: () => api.getEventsByType("HTTP_ATTACK", 0, 500),
+    refetchInterval: 5000,
   });
 
   const events = eventsData.content || [];
@@ -23,7 +23,6 @@ export default function HttpEventsPage() {
     return severityMap[sev] || "MEDIUM";
   };
 
-  // Filter events
   const filteredEvents = events.filter((event) => {
     const ip = event.sourceIp || event.deviceIp || "";
     const rule = event.ruleName || "";
@@ -40,7 +39,6 @@ export default function HttpEventsPage() {
     return matchesSearch && matchesSeverity;
   });
 
-  // Calculate severity distribution
   const severityCount = {};
   events.forEach((e) => {
     const severity = getSeverity(e.severity);
@@ -49,14 +47,10 @@ export default function HttpEventsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      {/* Header */}
       <header className="bg-white/80 backdrop-blur-lg shadow-lg border-b border-white/20">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center gap-4 mb-4">
-            <Link
-              to="/"
-              className="text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-2 transition-all hover:gap-3"
-            >
+            <Link to="/" className="text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-2 transition-all hover:gap-3">
               <span>←</span> Dashboard
             </Link>
             <div className="h-8 w-px bg-slate-300"></div>
@@ -64,32 +58,25 @@ export default function HttpEventsPage() {
               🛡️ HTTP Security Events
             </h1>
           </div>
-          <p className="text-slate-600 text-sm">
-            Real-time monitoring of HTTP attacks and suspicious activity
-          </p>
+          <p className="text-slate-600 text-sm">Real-time monitoring of HTTP attacks</p>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Search and Filters */}
         <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Search
-              </label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Search</label>
               <input
                 type="text"
-                placeholder="Search by IP, rule name, or payload..."
+                placeholder="Search by IP, rule name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Severity
-              </label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Severity</label>
               <select
                 value={severityFilter}
                 onChange={(e) => setSeverityFilter(e.target.value)}
@@ -104,7 +91,6 @@ export default function HttpEventsPage() {
             </div>
           </div>
 
-          {/* Severity Summary */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { name: "CRITICAL", color: "from-red-500 to-red-600", icon: "🔴" },
@@ -117,72 +103,41 @@ export default function HttpEventsPage() {
                   <p className="text-xs font-semibold opacity-90">{severity.name}</p>
                   <span className="text-lg">{severity.icon}</span>
                 </div>
-                <p className="text-3xl font-bold">
-                  {severityCount[severity.name] || 0}
-                </p>
+                <p className="text-3xl font-bold">{severityCount[severity.name] || 0}</p>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Events Table */}
         <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden">
           {isLoading ? (
-            <div className="p-8 text-center text-slate-500">
-              Loading events...
-            </div>
+            <div className="p-8 text-center text-slate-500">Loading events...</div>
           ) : filteredEvents.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">
-              No events found
-            </div>
+            <div className="p-8 text-center text-slate-500">No events found</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b-2 border-indigo-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
-                      Timestamp
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
-                      Source IP
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
-                      Rule
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
-                      Severity
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
-                      Method
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
-                      URI
-                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Timestamp</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Source IP</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Rule</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Severity</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Method</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">URI</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEvents.map((event, index) => (
-                    <tr
-                      key={event.id}
-                      className={`border-b border-slate-100 ${index % 2 === 0 ? "bg-white" : "bg-slate-50/50"} hover:bg-indigo-50/50 transition-colors`}
-                    >
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {new Date(event.timestamp).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-mono text-slate-900">
-                        {event.sourceIp || event.deviceIp || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 truncate max-w-xs">
-                        {event.ruleName || JSON.parse(event.messageJson || '{}').attack_type || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <SeverityBadge severity={getSeverity(event.severity)} />
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {event.method || "GET"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 truncate max-w-xs font-mono text-xs">
-                        {event.uri || event.requestUri || "-"}
+                    <tr key={event.id} className={`border-b border-slate-100 ${index % 2 === 0 ? "bg-white" : "bg-slate-50/50"} hover:bg-indigo-50/50 transition-colors`}>
+                      <td className="px-6 py-4 text-sm text-slate-600">{new Date(event.timestamp).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm font-mono text-slate-900">{event.sourceIp || event.deviceIp || "-"}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600 truncate max-w-xs">{event.ruleName || "-"}</td>
+                      <td className="px-6 py-4 text-sm"><SeverityBadge severity={getSeverity(event.severity)} /></td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{event.method || "GET"}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600 max-w-xs">
+                        <div className="truncate font-mono text-xs">{event.uri || event.requestUri || "-"}</div>
+                        {event.domain && <div className="text-xs text-red-600 mt-1">🚫 {event.domain}</div>}
                       </td>
                     </tr>
                   ))}
@@ -190,8 +145,6 @@ export default function HttpEventsPage() {
               </table>
             </div>
           )}
-
-          {/* Results summary */}
           <div className="bg-slate-50 border-t border-slate-200 px-6 py-3 text-sm text-slate-600">
             Showing {filteredEvents.length} of {events.length} events
           </div>
@@ -203,15 +156,13 @@ export default function HttpEventsPage() {
 
 function SeverityBadge({ severity }) {
   const styles = {
-    CRITICAL: "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-500/50",
-    HIGH: "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/50",
-    MEDIUM: "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg shadow-yellow-500/50",
-    LOW: "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg shadow-green-500/50",
+    CRITICAL: "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg",
+    HIGH: "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg",
+    MEDIUM: "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg",
+    LOW: "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg",
   };
   return (
-    <span
-      className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide ${styles[severity] || "bg-gray-500 text-white"}`}
-    >
+    <span className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase ${styles[severity] || "bg-gray-500 text-white"}`}>
       {severity}
     </span>
   );

@@ -112,35 +112,33 @@ public class SshCollectorService {
         }
 
         String sourceIp = matcher.group(1);
-        logger.debug("SSH failed authentication from IP: {}", sourceIp);
+        logger.warn("SSH failed authentication from IP: {}", sourceIp);
 
         // Find device by IP
-        Optional<Device> deviceOpt = deviceRepository.findByIpAddress(sourceIp);
+        var deviceOpt = deviceRepository.findByIpAddress(sourceIp);
+        Device device = deviceOpt.orElse(null);
 
-        if (deviceOpt.isEmpty()) {
-            logger.info("SSH failed auth from unknown IP: {}", sourceIp);
-            return;
-        }
-
-        Device device = deviceOpt.get();
-
-        // Create event
+        // Create event (even if device is unknown)
         Event event = new Event(device, EventType.SSH_FAILED_AUTH);
         event.setSourceIp(sourceIp);
         event.setMessageJson(line);
         eventRepository.save(event);
 
-        // Increment failed attempts
-        device.incrementFailedAttempts();
-        deviceRepository.save(device);
+        if (device != null) {
+            // Increment failed attempts
+            device.incrementFailedAttempts();
+            deviceRepository.save(device);
 
-        logger.info("SSH failed auth from {} (MAC: {}) - Total failures: {}",
-                sourceIp, device.getMacAddress(), device.getFailedAttempts());
+            logger.info("SSH failed auth from {} (MAC: {}) - Total failures: {}",
+                    sourceIp, device.getMacAddress(), device.getFailedAttempts());
 
-        // Check if ban is needed
-        if (device.getFailedAttempts() >= maxFailedAttempts) {
-            String banReason = String.format("Exceeded maximum SSH failed attempts (%d)", maxFailedAttempts);
-            policyService.banDevice(device, banReason, null);
+            // Check if ban is needed
+            if (device.getFailedAttempts() >= maxFailedAttempts) {
+                String banReason = String.format("Exceeded maximum SSH failed attempts (%d)", maxFailedAttempts);
+                policyService.banDevice(device, banReason, null);
+            }
+        } else {
+            logger.info("SSH failed auth from unknown device (IP: {})", sourceIp);
         }
     }
 }

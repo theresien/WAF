@@ -59,6 +59,22 @@ public class EventController {
         return ResponseEntity.ok(events);
     }
 
+    @GetMapping("/blacklisted-domains")
+    @Operation(
+        summary = "Get blacklisted domain access events",
+        description = "Retrieve all events where devices accessed blacklisted domains"
+    )
+    public ResponseEntity<Page<EventDTO>> getBlacklistedDomainEvents(
+            @PageableDefault(size = 50, sort = "timestamp", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+
+        Page<EventDTO> events = eventRepository
+                .findByEventType(EventType.HTTPS_DANGEROUS_SITE, pageable)
+                .map(EventDTO::fromEntity);
+
+        return ResponseEntity.ok(events);
+    }
+
     @GetMapping("/device/{deviceId}")
     @Operation(
         summary = "Get events for a device",

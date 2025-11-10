@@ -197,11 +197,12 @@ public class GlobalExceptionHandler {
         // Log full stack trace for debugging
         logger.error("Unexpected error", ex);
 
-        // Return generic error to client (no details)
+        // Return error details for debugging
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
             "status", "error",
             "type", "server_error",
-            "message", "An unexpected error occurred"
+            "message", ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred",
+            "error", ex.getClass().getSimpleName()
         ));
     }
 }

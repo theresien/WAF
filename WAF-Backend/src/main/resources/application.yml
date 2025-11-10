@@ -19,10 +19,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         dialect: org.hibernate.dialect.H2Dialect
 
   jackson:
@@ -39,27 +39,17 @@ server:
   servlet:
     context-path: /api
 
-# Security Configuration
-security:
-  jwt:
-    secret: ${JWT_SECRET:changeme-very-long-secret-key-for-jwt-signing-at-least-256-bits}
-    expiration: 86400000 # 24 hours in milliseconds
-
 # WAF-AP Manager Configuration
 wafap:
-  admin:
-    username: ${ADMIN_USERNAME:admin}
-    password: ${ADMIN_PASSWORD:admin}
-
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4000,http://localhost:8080}
 
   dhcp:
-    leases-file: /var/lib/dnsmasq/dhcp.leases
+    leases-file: /var/lib/misc/dnsmasq.leases
     scan-interval: 60000 # 1 minute
 
   ssh:
-    max-failed-attempts: 5
+    max-failed-attempts: 3
     ban-duration: 3600 # 1 hour in seconds
 
   modsecurity:
@@ -81,8 +71,10 @@ wafap:
 logging:
   level:
     root: INFO
-    com.wafap: DEBUG
-    org.springframework.security: DEBUG
+    com.wafap: INFO
+    com.wafap.service.DnsMonitorService: DEBUG
+    com.wafap.service.ConnectionMonitor: DEBUG
+    org.springframework.security: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

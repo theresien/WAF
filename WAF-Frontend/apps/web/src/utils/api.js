@@ -76,6 +76,20 @@ export const api = {
       body: JSON.stringify({ reason: "Allowed from dashboard" }),
     }),
   getPolicyStats: () => apiCall("/policy/stats"),
+  
+  // Ban IP
+  banIpAddress: (ip) =>
+    apiCall(`/policy/ip/${ip}/ban`, {
+      method: "POST",
+      body: JSON.stringify({ reason: "Banned from threat intel" }),
+    }),
+  
+  // Update device hostname
+  updateDeviceHostname: (deviceId, hostname) =>
+    apiCall(`/devices/${deviceId}/hostname`, {
+      method: "PATCH",
+      body: JSON.stringify({ hostname }),
+    }),
 };
 
 // Blacklist
@@ -85,14 +99,14 @@ export const addBlacklistedDomain = (domain) =>
     method: "POST",
     body: JSON.stringify({ domain }),
   });
+export const updateBlacklistedDomain = (domain, severity) =>
+  apiCall(`/blacklist/domains/${encodeURIComponent(domain)}`, {
+    method: "PUT",
+    body: JSON.stringify({ severity }),
+  });
 export const removeBlacklistedDomain = (domain) =>
   apiCall(`/blacklist/domains/${encodeURIComponent(domain)}`, {
     method: "DELETE",
   });
 
-// Threat Intelligence
-export const getThreatIntelStats = () => apiCall("/threat-intel/stats");
-export const updateThreatIntel = () =>
-  apiCall("/threat-intel/update", {
-    method: "POST",
-  });
+

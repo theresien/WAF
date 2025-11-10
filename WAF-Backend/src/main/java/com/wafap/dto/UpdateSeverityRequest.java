@@ -2,11 +2,8 @@ package com.wafap.dto;
 
 import jakarta.validation.constraints.*;
 
-public record BlacklistRequest(
-    @NotBlank(message = "Domain is required")
-    @Size(max = 255, message = "Domain too long")
-    String domain,
-    
+public record UpdateSeverityRequest(
+    @NotNull(message = "Severity is required")
     @Min(value = 1, message = "Severity must be between 1 and 5")
     @Max(value = 5, message = "Severity must be between 1 and 5")
     Integer severity

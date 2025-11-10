@@ -13,7 +13,7 @@ public class BlacklistedDomain {
     private Long id;
 
     @NotBlank
-    @Pattern(regexp = "^[a-zA-Z0-9][a-zA-Z0-9-_.]*[a-zA-Z0-9]$")
+    @Pattern(regexp = "^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$")
     @Size(max = 255)
     @Column(nullable = false, unique = true, length = 255)
     private String domain;

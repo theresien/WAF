@@ -45,5 +45,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     @Query("SELECT e FROM Event e ORDER BY e.timestamp DESC")
     Page<Event> findAllOrderByTimestampDesc(Pageable pageable);
 
+    List<Event> findByRequestUriContaining(String domain);
+
     void deleteByTimestampBefore(LocalDateTime timestamp);
 }

@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
-import ThemeToggle from "../components/ThemeToggle";
+import { useEffect, useState } from "react";
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   BarChart,
   Bar,
@@ -110,7 +111,7 @@ export default function Dashboard() {
           <NavLink href="/events/http" title="HTTP Events" icon="🌐" color="from-purple-500 to-purple-600" />
           <NavLink href="/events/ssh" title="SSH Events" icon="🔐" color="from-red-500 to-red-600" />
           <NavLink href="/blacklist" title="Blacklist" icon="🛡️" color="from-orange-500 to-red-600" />
-          <NavLink href="/threat-intel" title="Threat Intel" icon="🎯" color="from-cyan-500 to-blue-600" />
+          <NavLink href="/threat-intel" title="Malicious IPs" icon="🎯" color="from-cyan-500 to-blue-600" />
         </div>
 
         {/* Charts */}

@@ -1,32 +1,95 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { Shield, RefreshCw, TrendingUp, AlertCircle, Database, Clock } from 'lucide-react';
-import { getThreatIntelStats, updateThreatIntel } from '../../utils/api';
+import { Shield, Trash2, Plus, Search, AlertTriangle, Ban } from 'lucide-react';
+import { api } from '@/utils/api';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export default function ThreatIntelPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [newIp, setNewIp] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [notification, setNotification] = useState(null);
+  const [selectedIp, setSelectedIp] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: stats, isLoading, error } = useQuery({
-    queryKey: ['threatIntelStats'],
-    queryFn: getThreatIntelStats,
-    retry: 1,
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  // Fetch all events to extract malicious IPs
+  const { data: eventsData = { content: [] }, isLoading } = useQuery({
+    queryKey: ['events'],
+    queryFn: () => api.getEvents(0, 500),
   });
 
-  const updateMutation = useMutation({
-    mutationFn: updateThreatIntel,
-    onSuccess: () => {
-      queryClient.invalidateQueries(['threatIntelStats']);
+  const events = eventsData.content || [];
+
+  // Extract unique malicious IPs with attack counts
+  const ipStats = {};
+  events.forEach((event) => {
+    const ip = event.sourceIp || event.deviceIp;
+    if (ip) {
+      if (!ipStats[ip]) {
+        ipStats[ip] = {
+          ip,
+          count: 0,
+          lastSeen: event.timestamp,
+          types: new Set(),
+        };
+      }
+      ipStats[ip].count++;
+      ipStats[ip].types.add(event.eventType);
+      if (new Date(event.timestamp) > new Date(ipStats[ip].lastSeen)) {
+        ipStats[ip].lastSeen = event.timestamp;
+      }
+    }
+  });
+
+  const maliciousIps = Object.values(ipStats)
+    .map(stat => ({ ...stat, types: Array.from(stat.types) }))
+    .sort((a, b) => b.count - a.count);
+
+  const filteredIps = maliciousIps.filter(item =>
+    item.ip.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const banMutation = useMutation({
+    mutationFn: (ip) => api.banIpAddress(ip),
+    onSuccess: (data, ip) => {
+      showNotification(`IP ${ip} banned successfully`, 'success');
+      queryClient.invalidateQueries(['devices']);
+    },
+    onError: (error, ip) => {
+      showNotification(`Failed to ban ${ip}`, 'error');
     },
   });
 
-  const handleUpdate = () => {
-    updateMutation.mutate();
+  const handleBanIp = (ip) => {
+    if (confirm(`Ban IP ${ip}?`)) {
+      banMutation.mutate(ip);
+    }
+  };
+
+  const getIpHistory = (ip) => {
+    return events.filter(e => (e.sourceIp || e.deviceIp) === ip)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-8">
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
+          notification.type === 'success' 
+            ? 'bg-green-500 text-white' 
+            : 'bg-red-500 text-white'
+        }`}>
+          {notification.message}
+        </div>
+      )}
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 mb-8 border border-white/20">
@@ -38,126 +101,205 @@ export default function ThreatIntelPage() {
                 </Link>
                 <div className="h-6 w-px bg-slate-300"></div>
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl">
-                    <Shield className="w-8 h-8 text-white" />
+                  <div className="p-3 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl">
+                    <AlertTriangle className="w-8 h-8 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold text-slate-900">Threat Intelligence</h1>
+                    <h1 className="text-3xl font-bold text-slate-900">Malicious IPs</h1>
                   </div>
                 </div>
               </div>
-              <p className="text-slate-600 text-sm ml-2">Monitor and update threat data</p>
+              <p className="text-slate-600 text-sm ml-2">Detected attacking IP addresses</p>
             </div>
-            <button
-              onClick={handleUpdate}
-              disabled={updateMutation.isPending}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:scale-105 transition-transform shadow-lg disabled:opacity-50"
-            >
-              <RefreshCw className={`w-5 h-5 ${updateMutation.isPending ? 'animate-spin' : ''}`} />
-              {updateMutation.isPending ? 'Updating...' : 'Update Now'}
-            </button>
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20 text-center text-slate-600">
-            Loading statistics...
-          </div>
-        ) : error ? (
-          <div className="bg-red-50 rounded-2xl shadow-xl p-8 border border-red-200 text-center">
-            <p className="text-red-700 font-semibold mb-2">Error loading threat intelligence</p>
-            <p className="text-red-600 text-sm">{error.message}</p>
-          </div>
-        ) : stats ? (
-          <>
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {/* Total Threats */}
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:scale-105 transition-transform">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-600 text-sm">Total Threats</p>
-                    <p className="text-4xl font-bold text-slate-900 mt-2">{stats.totalThreats || 0}</p>
-                  </div>
-                  <div className="p-4 bg-gradient-to-br from-red-500 to-pink-500 rounded-xl">
-                    <AlertCircle className="w-8 h-8 text-white" />
-                  </div>
-                </div>
+        {/* Stats Card */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-600 text-sm">Unique Malicious IPs</p>
+                <p className="text-4xl font-bold text-slate-900 mt-1">{maliciousIps.length}</p>
               </div>
-
-              {/* Active Threats */}
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:scale-105 transition-transform">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-600 text-sm">Active Threats</p>
-                    <p className="text-4xl font-bold text-slate-900 mt-2">{stats.activeThreats || 0}</p>
-                  </div>
-                  <div className="p-4 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl">
-                    <TrendingUp className="w-8 h-8 text-white" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Database Size */}
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:scale-105 transition-transform">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-600 text-sm">Database Entries</p>
-                    <p className="text-4xl font-bold text-slate-900 mt-2">{stats.databaseSize || 0}</p>
-                  </div>
-                  <div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl">
-                    <Database className="w-8 h-8 text-white" />
-                  </div>
-                </div>
+              <div className="p-4 bg-gradient-to-br from-red-500 to-pink-500 rounded-xl">
+                <AlertTriangle className="w-8 h-8 text-white" />
               </div>
             </div>
-
-            {/* Last Update Info */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
-                  <Clock className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-slate-600 text-sm">Last Updated</p>
-                  <p className="text-slate-900 font-medium mt-1">
-                    {stats.lastUpdate ? new Date(stats.lastUpdate).toLocaleString() : 'Never'}
-                  </p>
-                </div>
+          </div>
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-600 text-sm">Total Attack Events</p>
+                <p className="text-4xl font-bold text-slate-900 mt-1">{events.length}</p>
+              </div>
+              <div className="p-4 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl">
+                <Shield className="w-8 h-8 text-white" />
               </div>
             </div>
+          </div>
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-600 text-sm">Avg Attacks per IP</p>
+                <p className="text-4xl font-bold text-slate-900 mt-1">
+                  {maliciousIps.length > 0 ? (events.length / maliciousIps.length).toFixed(1) : 0}
+                </p>
+              </div>
+              <div className="p-4 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
+                <Ban className="w-8 h-8 text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
 
-            {/* Additional Stats */}
-            {stats.sources && stats.sources.length > 0 && (
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 mt-8 border border-white/20">
-                <h2 className="text-xl font-bold text-slate-900 mb-4">Threat Sources</h2>
-                <div className="space-y-3">
-                  {stats.sources.map((source, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                      <span className="text-slate-900 font-medium">{source.name}</span>
-                      <span className="text-slate-600">{source.count} threats</span>
-                    </div>
+        {/* Search */}
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 mb-8 border border-white/20">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search IP addresses..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+
+        {/* IPs List */}
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+          {isLoading ? (
+            <div className="p-8 text-center text-slate-600">Loading...</div>
+          ) : filteredIps.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">
+              {searchTerm ? 'No IPs found' : 'No malicious IPs detected'}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b-2 border-indigo-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">IP Address</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Attack Count</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Attack Types</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Last Seen</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredIps.map((item, index) => (
+                    <tr
+                      key={item.ip}
+                      className={`border-b border-slate-100 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-indigo-50/50 transition-colors`}
+                    >
+                      <td className="px-6 py-4 text-sm font-mono text-slate-900 font-semibold">
+                        <button
+                          onClick={() => setSelectedIp(item.ip)}
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          {item.ip}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          item.count > 50 ? 'bg-red-100 text-red-700' :
+                          item.count > 20 ? 'bg-orange-100 text-orange-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {item.count} attacks
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <div className="flex gap-1 flex-wrap">
+                          {item.types.map((type, i) => (
+                            <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                              {type}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">
+                        {new Date(item.lastSeen).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <button
+                          onClick={() => handleBanIp(item.ip)}
+                          disabled={banMutation.isPending}
+                          className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition disabled:opacity-50 flex items-center gap-1"
+                        >
+                          <Ban className="w-3 h-3" />
+                          Ban IP
+                        </button>
+                      </td>
+                    </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Modal historique */}
+        {selectedIp && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedIp(null)}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="bg-gradient-to-r from-red-500 to-orange-500 p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">Attack History: {selectedIp}</h2>
+                  <button onClick={() => setSelectedIp(null)} className="text-white hover:text-gray-200 text-2xl">
+                    ×
+                  </button>
                 </div>
               </div>
-            )}
-          </>
-        ) : (
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20 text-center text-slate-500">
-            No threat intelligence data available
-          </div>
-        )}
-
-        {/* Update Status */}
-        {updateMutation.isSuccess && (
-          <div className="bg-green-50 rounded-2xl shadow-xl p-4 mt-8 border border-green-200">
-            <p className="text-green-700 text-center">✓ Threat intelligence updated successfully</p>
-          </div>
-        )}
-
-        {updateMutation.isError && (
-          <div className="bg-red-50 rounded-2xl shadow-xl p-4 mt-8 border border-red-200">
-            <p className="text-red-700 text-center">✗ Failed to update threat intelligence</p>
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                {getIpHistory(selectedIp).length === 0 ? (
+                  <p className="text-slate-500 text-center py-8">No events found</p>
+                ) : (
+                  <div className="space-y-3">
+                    {getIpHistory(selectedIp).map((event, idx) => (
+                      <div key={idx} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50">
+                        <div className="flex items-start justify-between mb-2">
+                          <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
+                            {event.eventType}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {new Date(event.timestamp).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          {event.ruleName && (
+                            <p className="text-slate-700">
+                              <span className="font-semibold">Rule:</span> {event.ruleName}
+                            </p>
+                          )}
+                          {(event.uri || event.requestUri) && (
+                            <p className="text-slate-700">
+                              <span className="font-semibold">URL:</span> <span className="font-mono text-xs break-all">{event.uri || event.requestUri}</span>
+                            </p>
+                          )}
+                          {event.domain && (
+                            <p className="text-red-700">
+                              <span className="font-semibold">🚫 Blacklisted Domain:</span> <span className="font-mono text-xs">{event.domain}</span>
+                            </p>
+                          )}
+                          {event.method && (
+                            <p className="text-slate-700">
+                              <span className="font-semibold">Method:</span> {event.method}
+                            </p>
+                          )}
+                          {event.username && (
+                            <p className="text-slate-700">
+                              <span className="font-semibold">Username:</span> {event.username}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
