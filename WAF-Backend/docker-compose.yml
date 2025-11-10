@@ -5,9 +5,9 @@ services:
     image: postgres:16-alpine
     container_name: wafap-postgres
     environment:
-      POSTGRES_DB: wafap
-      POSTGRES_USER: mahafeno
-      POSTGRES_PASSWORD: Mahafeno2003
+      POSTGRES_DB: ${DB_NAME:-wafap}
+      POSTGRES_USER: ${DB_USER:-mahafeno}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -15,7 +15,7 @@ services:
     networks:
       - wafap-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mahafeno"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-mahafeno}"]
       interval: 10s
       timeout: 5s
       retries: 5

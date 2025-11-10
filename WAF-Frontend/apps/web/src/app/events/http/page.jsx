@@ -46,41 +46,41 @@ export default function HttpEventsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      <header className="bg-white/80 backdrop-blur-lg shadow-lg border-b border-white/20">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg shadow-lg border-b border-white/20 dark:border-slate-700">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center gap-4 mb-4">
-            <Link to="/" className="text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-2 transition-all hover:gap-3">
+            <Link to="/" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold flex items-center gap-2 transition-all hover:gap-3">
               <span>←</span> Dashboard
             </Link>
-            <div className="h-8 w-px bg-slate-300"></div>
+            <div className="h-8 w-px bg-slate-300 dark:bg-slate-600"></div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               🛡️ HTTP Security Events
             </h1>
           </div>
-          <p className="text-slate-600 text-sm">Real-time monitoring of HTTP attacks</p>
+          <p className="text-slate-600 dark:text-slate-400 text-sm">Real-time monitoring of HTTP attacks</p>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 mb-6">
+        <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-slate-700 p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Search</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Search</label>
               <input
                 type="text"
                 placeholder="Search by IP, rule name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Severity</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Severity</label>
               <select
                 value={severityFilter}
                 onChange={(e) => setSeverityFilter(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="ALL">All Severities</option>
                 <option value="CRITICAL">Critical</option>
@@ -109,35 +109,35 @@ export default function HttpEventsPage() {
           </div>
         </div>
 
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+        <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-slate-700 overflow-hidden">
           {isLoading ? (
-            <div className="p-8 text-center text-slate-500">Loading events...</div>
+            <div className="p-8 text-center text-slate-500 dark:text-slate-400">Loading events...</div>
           ) : filteredEvents.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">No events found</div>
+            <div className="p-8 text-center text-slate-500 dark:text-slate-400">No events found</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b-2 border-indigo-200">
+                <thead className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-700 dark:to-slate-700 border-b-2 border-indigo-200 dark:border-slate-600">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Timestamp</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Source IP</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Rule</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Severity</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Method</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">URI</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Timestamp</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Source IP</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Rule</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Severity</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Method</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">URI</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEvents.map((event, index) => (
-                    <tr key={event.id} className={`border-b border-slate-100 ${index % 2 === 0 ? "bg-white" : "bg-slate-50/50"} hover:bg-indigo-50/50 transition-colors`}>
-                      <td className="px-6 py-4 text-sm text-slate-600">{new Date(event.timestamp).toLocaleString()}</td>
-                      <td className="px-6 py-4 text-sm font-mono text-slate-900">{event.sourceIp || event.deviceIp || "-"}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600 truncate max-w-xs">{event.ruleName || "-"}</td>
+                    <tr key={event.id} className={`border-b border-slate-100 dark:border-slate-700 ${index % 2 === 0 ? "bg-white dark:bg-slate-800" : "bg-slate-50/50 dark:bg-slate-700/50"} hover:bg-indigo-50/50 dark:hover:bg-slate-700/50 transition-colors`}>
+                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{new Date(event.timestamp).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm font-mono text-slate-900 dark:text-white">{event.sourceIp || event.deviceIp || "-"}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300 truncate max-w-xs">{event.ruleName || "-"}</td>
                       <td className="px-6 py-4 text-sm"><SeverityBadge severity={getSeverity(event.severity)} /></td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{event.method || "GET"}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600 max-w-xs">
+                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{event.method || "GET"}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300 max-w-xs">
                         <div className="truncate font-mono text-xs">{event.uri || event.requestUri || "-"}</div>
-                        {event.domain && <div className="text-xs text-red-600 mt-1">🚫 {event.domain}</div>}
+                        {event.domain && <div className="text-xs text-red-600 dark:text-red-400 mt-1">🚫 {event.domain}</div>}
                       </td>
                     </tr>
                   ))}
@@ -145,7 +145,7 @@ export default function HttpEventsPage() {
               </table>
             </div>
           )}
-          <div className="bg-slate-50 border-t border-slate-200 px-6 py-3 text-sm text-slate-600">
+          <div className="bg-slate-50 dark:bg-slate-700 border-t border-slate-200 dark:border-slate-600 px-6 py-3 text-sm text-slate-600 dark:text-slate-300">
             Showing {filteredEvents.length} of {events.length} events
           </div>
         </div>

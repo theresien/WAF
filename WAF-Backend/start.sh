@@ -1,16 +1,15 @@
 #!/bin/bash
-# Script de lancement de l'application WAF-AP Manager
-
-set -e
+set -euo pipefail
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Charger les variables d'environnement
 if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
+    set -a
+    source .env
+    set +a
 else
     echo -e "${YELLOW}⚠️  Fichier .env manquant, utilisation des valeurs par défaut${NC}"
 fi
@@ -19,10 +18,11 @@ echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}  WAF-AP Manager - Démarrage${NC}"
 echo -e "${BLUE}========================================${NC}\n"
 
-# Vérifier que PostgreSQL est actif
-if ! sudo systemctl is-active --quiet postgresql; then
+if ! sudo systemctl is-active --quiet postgresql 2>/dev/null; then
     echo -e "${YELLOW}Démarrage de PostgreSQL...${NC}"
-    sudo systemctl start postgresql
+    if ! sudo systemctl start postgresql; then
+        echo -e "${YELLOW}⚠️  PostgreSQL non disponible, utilisation de H2${NC}"
+    fi
 fi
 
 # Créer le dossier de logs
@@ -30,5 +30,9 @@ mkdir -p logs
 
 echo -e "${GREEN}Lancement de l'application...${NC}\n"
 
-# Lancer avec Maven
+if [ ! -f ./mvnw ]; then
+    echo -e "${YELLOW}⚠️  Maven wrapper manquant${NC}"
+    exit 1
+fi
+
 ./mvnw spring-boot:run

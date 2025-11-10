@@ -89,7 +89,6 @@ export default function BlacklistPage() {
               <p className="text-slate-600 dark:text-slate-400 text-sm ml-2">Manage blocked domains</p>
             </div>
             <div className="flex items-center gap-4">
-              <ThemeToggle />
               <button
                 onClick={() => setShowAddForm(!showAddForm)}
                 className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:scale-105 transition-transform shadow-lg"

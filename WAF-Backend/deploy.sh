@@ -1,7 +1,5 @@
 #!/bin/bash
-# Script de déploiement WAF-AP Manager sur PC (sans Docker)
-
-set -e  # Exit on error
+set -euo pipefail
 
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
@@ -46,13 +44,19 @@ if ! sudo systemctl is-active --quiet postgresql; then
 fi
 echo -e "${GREEN}✓${NC} PostgreSQL actif"
 
-# 3. Charger les variables d'environnement
 echo -e "\n${YELLOW}[3/7]${NC} Chargement des variables d'environnement..."
 if [ ! -f .env ]; then
-    echo -e "${RED}❌ Fichier .env manquant. Copiez .env.example vers .env et configurez-le.${NC}"
+    echo -e "${RED}❌ Fichier .env manquant. Copiez .env.example vers .env et configurez-le.${NC}" >&2
     exit 1
 fi
-export $(cat .env | grep -v '^#' | xargs)
+set -a
+source .env
+set +a
+
+if [ -z "${DB_PASSWORD:-}" ]; then
+    echo -e "${RED}❌ DB_PASSWORD non défini dans .env${NC}" >&2
+    exit 1
+fi
 echo -e "${GREEN}✓${NC} Variables chargées depuis .env"
 
 # 4. Créer la base de données
@@ -67,12 +71,14 @@ else
     echo -e "${GREEN}✓${NC} Base de données créée"
 fi
 
-# Vérifier si l'utilisateur existe
 if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1; then
     echo -e "${GREEN}✓${NC} Utilisateur '$DB_USER' existe déjà"
 else
     echo -e "${YELLOW}Création de l'utilisateur '$DB_USER'...${NC}"
-    sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
+    if ! sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"; then
+        echo -e "${RED}❌ Échec de la création de l'utilisateur${NC}" >&2
+        exit 1
+    fi
     echo -e "${GREEN}✓${NC} Utilisateur créé"
 fi
 
@@ -108,9 +114,11 @@ else
     echo -e "${GREEN}✓${NC} Règle sudoers existe déjà"
 fi
 
-# 6. Build de l'application
 echo -e "\n${YELLOW}[6/7]${NC} Build de l'application..."
-./mvnw clean package -DskipTests
+if ! ./mvnw clean package -DskipTests; then
+    echo -e "${RED}❌ Échec du build${NC}" >&2
+    exit 1
+fi
 echo -e "${GREEN}✓${NC} Build terminé"
 
 # 7. Instructions finales
