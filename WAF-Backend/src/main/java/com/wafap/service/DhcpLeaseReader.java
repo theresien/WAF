@@ -118,11 +118,9 @@ public class DhcpLeaseReader {
                     device.setIpAddress(ipAddress);
                 }
 
-                // Only update hostname if device doesn't have one yet
-                if (device.getHostname() == null || device.getHostname().isBlank()) {
-                    if (hostname != null && !hostname.equals(device.getHostname())) {
-                        device.setHostname(hostname);
-                    }
+                // Update hostname if we have a better one
+                if (hostname != null && !hostname.equals(device.getHostname())) {
+                    device.setHostname(hostname);
                 }
 
                 // Update vendor if not set

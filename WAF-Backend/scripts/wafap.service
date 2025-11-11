@@ -1,0 +1,16 @@
+[Unit]
+Description=WAF-AP Manager Service
+After=network.target dnsmasq.service hostapd.service
+
+[Service]
+Type=simple
+User=mahafeno
+WorkingDirectory=/home/mahafeno/Documents/WAF/WAF-Backend
+ExecStart=/usr/bin/java -jar /home/mahafeno/Documents/WAF/WAF-Backend/target/waf-ap-manager-1.0.0.jar
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

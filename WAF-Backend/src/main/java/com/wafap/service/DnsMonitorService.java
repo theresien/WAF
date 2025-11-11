@@ -88,6 +88,18 @@ public class DnsMonitorService {
                 var deviceOpt = deviceRepository.findByIpAddress(sourceIp);
                 Device device = deviceOpt.orElse(null);
                 
+                // Only create event if device exists and is currently connected
+                if (device == null) {
+                    logger.debug("Ignoring DNS query from unknown device: {}", sourceIp);
+                    return;
+                }
+                
+                if (device.getIsConnected() == null || !device.getIsConnected()) {
+                    logger.debug("Ignoring DNS query from disconnected device: {} ({})", 
+                        device.getMacAddress(), sourceIp);
+                    return;
+                }
+                
                 Event event = new Event(device, EventType.HTTPS_DANGEROUS_SITE);
                 event.setSourceIp(sourceIp);
                 event.setRequestUri(domain);
@@ -107,9 +119,9 @@ public class DnsMonitorService {
 
                 eventRepository.save(event);
                 logger.info("Event created for blacklisted domain: {} from {} (device: {})", 
-                    domain, sourceIp, device != null ? device.getMacAddress() : "unknown");
+                    domain, sourceIp, device.getMacAddress());
 
-                if (device != null && blacklisted.getSeverity() >= 4) {
+                if (blacklisted.getSeverity() >= 4) {
                     policyService.banDevice(device, "Accessed dangerous site: " + domain, null);
                 }
             }

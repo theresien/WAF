@@ -26,25 +26,56 @@ export default function ThreatIntelPage() {
     queryFn: () => api.getEvents(0, 500),
   });
 
+  const { data: devicesData = { content: [] } } = useQuery({
+    queryKey: ['devices'],
+    queryFn: () => api.getDevices(0, 500),
+  });
+
   const events = eventsData.content || [];
+  const devices = devicesData.content || [];
+  
+  // Get currently connected devices (seen in last hour)
+  const connectedDeviceIps = devices
+    .filter(device => {
+      const lastSeen = new Date(device.lastSeen);
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      return lastSeen > oneHourAgo;
+    })
+    .map(device => device.ipAddress);
+  
+  const getHostnameByIp = (ip) => {
+    const device = devices.find(d => d.ipAddress === ip);
+    return device?.hostname || "-";
+  };
 
   // Extract unique malicious IPs with attack counts
+  // Only include IPs from devices that are currently connected OR external attacking IPs
   const ipStats = {};
   events.forEach((event) => {
     const ip = event.sourceIp || event.deviceIp;
     if (ip) {
-      if (!ipStats[ip]) {
-        ipStats[ip] = {
-          ip,
-          count: 0,
-          lastSeen: event.timestamp,
-          types: new Set(),
-        };
-      }
-      ipStats[ip].count++;
-      ipStats[ip].types.add(event.eventType);
-      if (new Date(event.timestamp) > new Date(ipStats[ip].lastSeen)) {
-        ipStats[ip].lastSeen = event.timestamp;
+      // Check if this is a connected device or an external attacker
+      const isConnectedDevice = connectedDeviceIps.includes(ip);
+      const isInternalNetwork = ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.');
+      
+      // Only show threats from:
+      // 1. Currently connected devices with suspicious activity
+      // 2. External IPs (not in internal network) - these are always threats
+      if (isConnectedDevice || !isInternalNetwork) {
+        if (!ipStats[ip]) {
+          ipStats[ip] = {
+            ip,
+            count: 0,
+            lastSeen: event.timestamp,
+            types: new Set(),
+            isConnected: isConnectedDevice,
+          };
+        }
+        ipStats[ip].count++;
+        ipStats[ip].types.add(event.eventType);
+        if (new Date(event.timestamp) > new Date(ipStats[ip].lastSeen)) {
+          ipStats[ip].lastSeen = event.timestamp;
+        }
       }
     }
   });
@@ -109,7 +140,9 @@ export default function ThreatIntelPage() {
                   </div>
                 </div>
               </div>
-              <p className="text-slate-600 dark:text-slate-400 text-sm ml-2">Detected attacking IP addresses</p>
+              <p className="text-slate-600 dark:text-slate-400 text-sm ml-2">
+                Menaces détectées : appareils connectés avec activité suspecte et attaquants externes
+              </p>
             </div>
           </div>
         </div>
@@ -181,6 +214,7 @@ export default function ThreatIntelPage() {
                 <thead className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-700 dark:to-slate-700 border-b-2 border-indigo-200 dark:border-slate-600">
                   <tr>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">IP Address</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Hostname</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Attack Count</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Attack Types</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Last Seen</th>
@@ -200,6 +234,21 @@ export default function ThreatIntelPage() {
                         >
                           {item.ip}
                         </button>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                        <div className="flex items-center gap-2">
+                          {getHostnameByIp(item.ip)}
+                          {item.isConnected && (
+                            <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs font-medium">
+                              Connecté
+                            </span>
+                          )}
+                          {!item.isConnected && (
+                            <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-medium">
+                              Externe
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${

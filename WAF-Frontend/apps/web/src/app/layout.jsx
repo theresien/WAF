@@ -7,9 +7,10 @@ export default function RootLayout({ children }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 0,
-        refetchOnMount: true,
-        refetchOnWindowFocus: true,
+        staleTime: 1000 * 60,
+        gcTime: 1000 * 60 * 5,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
         retry: 1,
       },
     },

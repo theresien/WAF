@@ -15,7 +15,19 @@ export default function HttpEventsPage() {
     refetchInterval: 5000,
   });
 
+  const { data: devicesData = { content: [] } } = useQuery({
+    queryKey: ["devices"],
+    queryFn: () => api.getDevices(0, 500),
+    refetchInterval: 5000,
+  });
+
   const events = eventsData.content || [];
+  const devices = devicesData.content || [];
+  
+  const getHostnameByIp = (ip) => {
+    const device = devices.find(d => d.ipAddress === ip);
+    return device?.hostname || "-";
+  };
   const severityMap = { 1: "LOW", 2: "MEDIUM", 3: "HIGH", 4: "CRITICAL" };
   
   const getSeverity = (sev) => {
@@ -121,7 +133,7 @@ export default function HttpEventsPage() {
                   <tr>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Timestamp</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Source IP</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Rule</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Hostname</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Severity</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Method</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">URI</th>
@@ -132,7 +144,7 @@ export default function HttpEventsPage() {
                     <tr key={event.id} className={`border-b border-slate-100 dark:border-slate-700 ${index % 2 === 0 ? "bg-white dark:bg-slate-800" : "bg-slate-50/50 dark:bg-slate-700/50"} hover:bg-indigo-50/50 dark:hover:bg-slate-700/50 transition-colors`}>
                       <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{new Date(event.timestamp).toLocaleString()}</td>
                       <td className="px-6 py-4 text-sm font-mono text-slate-900 dark:text-white">{event.sourceIp || event.deviceIp || "-"}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300 truncate max-w-xs">{event.ruleName || "-"}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{getHostnameByIp(event.sourceIp || event.deviceIp)}</td>
                       <td className="px-6 py-4 text-sm"><SeverityBadge severity={getSeverity(event.severity)} /></td>
                       <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{event.method || "GET"}</td>
                       <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300 max-w-xs">

@@ -66,7 +66,13 @@ public class LogIngesterService {
             Device unknownDevice = new Device();
             unknownDevice.setIpAddress(clientIp);
             unknownDevice.setMacAddress("unknown");
-            unknownDevice.setHostname("Unknown Host");
+            // Try to resolve hostname
+            try {
+                String hostname = java.net.InetAddress.getByName(clientIp).getCanonicalHostName();
+                unknownDevice.setHostname(!hostname.equals(clientIp) ? hostname : "Unknown-" + clientIp);
+            } catch (Exception e) {
+                unknownDevice.setHostname("Unknown-" + clientIp);
+            }
             deviceOpt = Optional.of(deviceRepository.save(unknownDevice));
         }
 
